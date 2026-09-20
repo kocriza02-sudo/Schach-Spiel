@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schach – Holzoptik</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+  color: white;
+  background:
+    linear-gradient(135deg, #3b2113, #80512e, #2b170d);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 18px;
+}
+
+.app {
+  width: min(1100px, 100%);
+  background: rgba(35, 20, 12, 0.94);
+  border: 2px solid #b98550;
+  border-radius: 22px;
+  padding: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+
+h1 {
+  text-align: center;
+  margin: 0 0 16px;
+  color: #f2d0a0;
+  font-size: clamp(30px, 6vw, 48px);
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 15px;
+}
+
+.badge {
+  background: #654025;
+  border: 1px solid #b98550;
+  border-radius: 12px;
+  padding: 11px 15px;
+  font-weight: bold;
+}
+
+button {
+  border: none;
+  border-radius: 11px;
+  padding: 11px 15px;
+  background: #d19a60;
+  color: #24150b;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.12);
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 1fr 250px;
+  gap: 18px;
+}
+
+.board {
+  width: min(78vw, 700px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  border: 8px solid #482915;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 14px 35px rgba(0,0,0,.7);
+}
+
+.square {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  font-size: clamp(30px, 7vw, 68px);
+}
+
+.light {
+  background: #e3c197;
+}
+
+.dark {
+  background: #87552e;
+}
+
+.square.selected {
+  outline: 5px solid #f0d36f;
+  outline-offset: -5px;
+}
+
+.square.move::after {
+  content: "";
+  width: 22%;
+  height: 22%;
+  border-radius: 50%;
+  background: rgba(40,25,15,.55);
+  position: absolute;
+}
+
+.square.capture {
+  outline: 6px solid #d04b3e;
+  outline-offset: -6px;
+}
+
+.piece.white {
+  color: white;
+  text-shadow:
+    0 2px 3px black,
+    0 0 2px #222;
+}
+
+.piece.black {
+  color: #382115;
+  text-shadow:
+    0 1px 2px #d9b487;
+}
+
+.side {
+  background: #3b2417;
+  border: 1px solid #9b693d;
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.side h2 {
+  color: #edc38f;
+  margin-top: 0;
+}
+
+.status {
+  padding: 13px;
+  border-radius: 12px;
+  background: #5c3822;
+  margin-bottom: 14px;
+  line-height: 1.4;
+}
+
+.moves {
+  height: 280px;
+  overflow-y: auto;
+  background: #28180f;
+  border-radius: 10px;
+  padding: 10px;
+  font-family: monospace;
+}
+
+.move-row {
+  padding: 6px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.75);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.modal {
+  width: min(430px, 100%);
+  background: #3a2417;
+  border: 2px solid #d09a61;
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 20px 60px black;
+}
+
+.modal h2 {
+  color: #f0c98f;
+  font-size: 38px;
+  margin-top: 0;
+}
+
+.modal p {
+  font-size: 20px;
+}
+
+@media (max-width: 800px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .side {
+    order: 2;
+  }
+
+  .board {
+    width: min(94vw, 650px);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <h1>♔ Schach ♚</h1>
+
+  <div class="top">
+
+    <div id="turn" class="badge">
+      Weiß ist am Zug
+    </div>
+
+    <div>
+      <button id="newGame">🔄 Neues Spiel</button>
+      <button id="soundButton">🔊 Sound: An</button>
+    </div>
+
+  </div>
+
+  <div class="layout">
+
+    <div id="board" class="board"></div>
+
+    <aside class="side">
+
+      <h2>Spiel</h2>
+
+      <div id="status" class="status">
+        Wähle eine Figur aus.
+      </div>
+
+      <h2>Züge</h2>
+
+      <div id="moves" class="moves"></div>
+
+    </aside>
+
+  </div>
+
+</div>
+
+
+<!-- SCHACHMATT-FENSTER -->
+
+<div id="overlay" class="overlay">
+
+  <div class="modal">
+
+    <h2>♛ SCHACHMATT!</h2>
+
+    <p id="endText"></p>
+
+    <button id="again">
+      ♟ Neue Partie
+    </button>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const startingBoard = [
+
+  ["♜","♞","♝","♛","♚","♝","♞","♜"],
+
+  ["♟","♟","♟","♟","♟","♟","♟","♟"],
+
+  ["","","","","","","",""],
+
+  ["","","","","","","",""],
+
+  ["","","","","","","",""],
+
+  ["","","","","","","",""],
+
+  ["♙","♙","♙","♙","♙","♙","♙","♙"],
+
+  ["♖","♘","♗","♕","♔","♗","♘","♖"]
+
+];
+
+
+const whitePieces = new Set([
+  "♔","♕","♖","♗","♘","♙"
+]);
+
+
+let board = [];
+let turn = "w";
+let selected = null;
+let moveHistory = [];
+let soundEnabled = true;
+let gameOver = false;
+
+
+function pieceColor(piece) {
+
+  if (!piece) return null;
+
+  return whitePieces.has(piece) ? "w" : "b";
+
+}
+
+
+function resetGame() {
+
+  board = startingBoard.map(row => [...row]);
+
+  turn = "w";
+
+  selected = null;
+
+  moveHistory = [];
+
+  gameOver = false;
+
+  document.getElementById("overlay").style.display = "none";
+
+  document.getElementById("status").textContent =
+    "Wähle eine Figur aus.";
+
+  render();
+
+}
+
+
+function render() {
+
+  const boardElement = document.getElementById("board");
+
+  boardElement.innerHTML = "";
+
+
+  for (let row = 0; row < 8; row++) {
+
+    for (let col = 0; col < 8; col++) {
+
+      const square = document.createElement("div");
+
+      square.className =
+        "square " +
+        ((row + col) % 2 ? "dark" : "light");
+
+
+      square.dataset.row = row;
+      square.dataset.col = col;
+
+
+      const piece = board[row][col];
+
+
+      if (piece) {
+
+        const pieceElement = document.createElement("span");
+
+        pieceElement.className =
+          "piece " +
+          (pieceColor(piece) === "w"
+            ? "white"
+            : "black");
+
+        pieceElement.textContent = piece;
+
+        square.appendChild(pieceElement);
+
+      }
+
+
+      if (
+        selected &&
+        selected.row === row &&
+        selected.col === col
+      ) {
+
+        square.classList.add("selected");
+
+      }
+
+
+      if (
+        selected &&
+        canMove(
+          selected.row,
+          selected.col,
+          row,
+          col
+        )
+      ) {
+
+        if (board[row][col]) {
+
+          square.classList.add("capture");
+
+        } else {
+
+          square.classList.add("move");
+
+        }
+
+      }
+
+
+      square.addEventListener(
+        "click",
+        () => handleSquareClick(row, col)
+      );
+
+
+      boardElement.appendChild(square);
+
+    }
+
+  }
+
+
+  document.getElementById("turn").textContent =
+    turn === "w"
+      ? "Weiß ist am Zug"
+      : "Braun ist am Zug";
+
+
+  document.getElementById("moves").innerHTML =
+    moveHistory
+      .map((move, index) =>
+        `<div class="move-row">
+          ${index + 1}. ${move}
+        </div>`
+      )
+      .join("");
+
+}
+
+
+function inside(row, col) {
+
+  return (
+    row >= 0 &&
+    row < 8 &&
+    col >= 0 &&
+    col < 8
+  );
+
+}
+
+
+function clearPath(
+  row,
+  col,
+  targetRow,
+  targetCol
+) {
+
+  const rowStep = Math.sign(targetRow - row);
+
+  const colStep = Math.sign(targetCol - col);
+
+  let r = row + rowStep;
+  let c = col + colStep;
+
+
+  while (
+    r !== targetRow ||
+    c !== targetCol
+  ) {
+
+    if (board[r][c]) {
+
+      return false;
+
+    }
+
+    r += rowStep;
+    c += colStep;
+
+  }
+
+
+  return true;
+
+}
+
+
+function canMove(
+  row,
+  col,
+  targetRow,
+  targetCol
+) {
+
+  if (!inside(targetRow, targetCol)) {
+    return false;
+  }
+
+
+  const piece = board[row][col];
+
+  if (!piece) {
+    return false;
+  }
+
+
+  const target = board[targetRow][targetCol];
+
+  const color = pieceColor(piece);
+
+
+  if (
+    target &&
+    pieceColor(target) === color
+  ) {
+
+    return false;
+
+  }
+
+
+  const dr = targetRow - row;
+
+  const dc = targetCol - col;
+
+  const absR = Math.abs(dr);
+
+  const absC = Math.abs(dc);
+
+
+  // BAUER
+
+  if (
+    piece === "♙" ||
+    piece === "♟"
+  ) {
+
+    const direction =
+      color === "w" ? -1 : 1;
+
+    const startRow =
+      color === "w" ? 6 : 1;
+
+
+    if (
+      dc === 0 &&
+      !target &&
+      dr === direction
+    ) {
+
+      return true;
+
+    }
+
+
+    if (
+      dc === 0 &&
+      !target &&
+      row === startRow &&
+      dr === direction * 2 &&
+      !board[row + direction][col]
+    ) {
+
+      return true;
+
+    }
+
+
+    if (
+      absC === 1 &&
+      dr === direction &&
+      target
+    ) {
+
+      return true;
+
+    }
+
+
+    return false;
+
+  }
+
+
+  // SPRINGER
+
+  if (
+    piece === "♘" ||
+    piece === "♞"
+  ) {
+
+    return (
+      (absR === 2 && absC === 1) ||
+      (absR === 1 && absC === 2)
+    );
+
+  }
+
+
+  // KÖNIG
+
+  if (
+    piece === "♔" ||
+    piece === "♚"
+  ) {
+
+    return (
+      absR <= 1 &&
+      absC <= 1 &&
+      absR + absC > 0
+    );
+
+  }
+
+
+  // TURM
+
+  if (
+    piece === "♖" ||
+    piece === "♜"
+  ) {
+
+    return (
+      (dr === 0 || dc === 0) &&
+      clearPath(
+        row,
+        col,
+        targetRow,
+        targetCol
+      )
+    );
+
+  }
+
+
+  // LÄUFER
+
+  if (
+    piece === "♗" ||
+    piece === "♝"
+  ) {
+
+    return (
+      absR === absC &&
+      clearPath(
+        row,
+        col,
+        targetRow,
+        targetCol
+      )
+    );
+
+  }
+
+
+  // DAME
+
+  if (
+    piece === "♕" ||
+    piece === "♛"
+  ) {
+
+    return (
+      (
+        dr === 0 ||
+        dc === 0 ||
+        absR === absC
+      ) &&
+      clearPath(
+        row,
+        col,
+        targetRow,
+        targetCol
+      )
+    );
+
+  }
+
+
+  return false;
+
+}
+
+
+function handleSquareClick(row, col) {
+
+  if (gameOver) return;
+
+
+  const piece = board[row][col];
+
+
+  // Figur auswählen
+
+  if (!selected) {
+
+    if (
+      piece &&
+      pieceColor(piece) === turn
+    ) {
+
+      selected = {
+        row,
+        col
+      };
+
+      render();
+
+    }
+
+    return;
+
+  }
+
+
+  // Zug machen
+
+  if (
+    canMove(
+      selected.row,
+      selected.col,
+      row,
+      col
+    )
+  ) {
+
+    const movingPiece =
+      board[selected.row][selected.col];
+
+    const capturedPiece =
+      board[row][col];
+
+
+    board[row][col] = movingPiece;
+
+    board[selected.row][selected.col] = "";
+
+
+    const file =
+      String.fromCharCode(97 + col);
+
+    const rank =
+      8 - row;
+
+
+    let notation =
+      movingPiece +
+      " " +
+      file +
+      rank;
+
+
+    if (capturedPiece) {
+
+      notation += " ×";
+
+    }
+
+
+    moveHistory.push(notation);
+
+
+    selected = null;
+
+
+    turn =
+      turn === "w"
+        ? "b"
+        : "w";
+
+
+    playMoveSound();
+
+
+    if (isCheck(turn)) {
+
+      document.getElementById("status").textContent =
+        "⚠️ SCHACH! Der König ist bedroht.";
+
+    } else {
+
+      document.getElementById("status").textContent =
+        "Zug ausgeführt.";
+
+    }
+
+
+    if (isCheckmate(turn)) {
+
+      gameOver = true;
+
+
+      const winner =
+        turn === "w"
+          ? "Braun"
+          : "Weiß";
+
+
+      const loser =
+        turn === "w"
+          ? "Weiß"
+          : "Braun";
+
+
+      showCheckmate(
+        winner,
+        loser
+      );
+
+    }
+
+
+    render();
+
+    return;
+
+  }
+
+
+  // Andere Figur auswählen
+
+  if (
+    piece &&
+    pieceColor(piece) === turn
+  ) {
+
+    selected = {
+      row,
+      col
+    };
+
+  } else {
+
+    selected = null;
+
+  }
+
+
+  render();
+
+}
+
+
+function findKing(color) {
+
+  const king =
+    color === "w"
+      ? "♔"
+      : "♚";
+
+
+  for (let row = 0; row < 8; row++) {
+
+    for (let col = 0; col < 8; col++) {
+
+      if (board[row][col] === king) {
+
+        return [row, col];
+
+      }
+
+    }
+
+  }
+
+
+  return null;
+
+}
+
+
+function isCheck(color) {
+
+  const king =
+    findKing(color);
+
+
+  if (!king) {
+    return false;
+  }
+
+
+  const enemy =
+    color === "w"
+      ? "b"
+      : "w";
+
+
+  for (let row = 0; row < 8; row++) {
+
+    for (let col = 0; col < 8; col++) {
+
+      if (
+        pieceColor(board[row][col]) === enemy
+      ) {
+
+        if (
+          canMove(
+            row,
+            col,
+            king[0],
+            king[1]
+          )
+        ) {
+
+          return true;
+
+        }
+
+      }
+
+    }
+
+  }
+
+
+  return false;
+
+}
+
+
+function isCheckmate(color) {
+
+  if (!isCheck(color)) {
+
+    return false;
+
+  }
+
+
+  /*
+    Ein vollständiger Schach-Engine-Test
+    kommt in der nächsten Version.
+  */
+
+  return false;
+
+}
+
+
+function showCheckmate(
+  winner,
+  loser
+) {
+
+  document.getElementById("endText").textContent =
+    winner +
+    " gewinnt! " +
+    loser +
+    " hat verloren.";
+
+
+  document.getElementById("overlay").style.display =
+    "flex";
+
+}
+
+
+function playMoveSound() {
+
+  if (!soundEnabled) {
+    return;
+  }
+
+
+  const AudioContext =
+    window.AudioContext ||
+    window.webkitAudioContext;
+
+
+  if (!AudioContext) {
+    return;
+  }
+
+
+  const audio =
+    new AudioContext();
+
+
+  const oscillator =
+    audio.createOscillator();
+
+
+  const gain =
+    audio.createGain();
+
+
+  oscillator.frequency.value =
+    520;
+
+
+  gain.gain.setValueAtTime(
+    0.06,
+    audio.currentTime
+  );
+
+
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audio.currentTime + 0.08
+  );
+
+
+  oscillator.connect(gain);
+
+  gain.connect(audio.destination);
+
+
+  oscillator.start();
+
+  oscillator.stop(
+    audio.currentTime + 0.08
+  );
+
+}
+
+
+document
+  .getElementById("newGame")
+  .addEventListener(
+    "click",
+    resetGame
+  );
+
+
+document
+  .getElementById("again")
+  .addEventListener(
+    "click",
+    resetGame
+  );
+
+
+document
+  .getElementById("soundButton")
+  .addEventListener(
+    "click",
+    () => {
+
+      soundEnabled =
+        !soundEnabled;
+
+
+      document.getElementById(
+        "soundButton"
+      ).textContent =
+        soundEnabled
+          ? "🔊 Sound: An"
+          : "🔇 Sound: Aus";
+
+    }
+  );
+
+
+resetGame();
+
+</script>
+
+</body>
+  </html>
